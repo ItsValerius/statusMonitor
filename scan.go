@@ -16,6 +16,7 @@ type ScanResult struct {
 	Address string
 }
 
+// GetOwnIPv4Adress returns the IPv4 address of the local machine.
 func GetOwnIPv4Adress() string {
 	ifaces, err := net.Interfaces()
 	if err != nil {
@@ -36,21 +37,25 @@ func GetOwnIPv4Adress() string {
 			switch v := addr.(type) {
 			case *net.IPNet:
 				ip = v.IP
+
 			case *net.IPAddr:
 				ip = v.IP
 			}
 			log.Println("[", index, "]", i.Name, ">", ip)
-
-			if ip.To4() != nil && strings.Count(ip.To4().String(), ":") < 2 && !strings.Contains(i.Name, "WSL") && !ip.IsLoopback() {
+			if ip.To4() != nil &&
+				strings.Count(ip.To4().String(), ":") < 2 &&
+				!strings.Contains(i.Name, "WSL") &&
+				!ip.IsLoopback() {
 				ipv4 = ip
 			}
 		}
 	}
 
-	fmt.Println("IPv4 address : ", ipv4.String())
+	log.Println("IPv4 address : ", ipv4.String())
 	return ipv4.String()
 }
 
+//StartScan starts a scan of the local network for open ports.
 func StartScan(ipv4Arr []string, port int, results *[]ScanResult) {
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
@@ -60,7 +65,7 @@ func StartScan(ipv4Arr []string, port int, results *[]ScanResult) {
 
 		go func(target string) {
 			defer wg.Done()
-			fmt.Println("Port Scanning " + target)
+			//fmt.Println("Port Scanning " + target)
 			open := ScanPort("tcp", target, port)
 
 			*results = append(*results, ScanResult{port, open, target})
@@ -71,6 +76,7 @@ func StartScan(ipv4Arr []string, port int, results *[]ScanResult) {
 
 }
 
+//ScanPort scans a port on a target host.
 func ScanPort(protocol, hostname string, port int) bool {
 	address := hostname + ":" + strconv.Itoa(port)
 	conn, err := net.DialTimeout(protocol, address, time.Second)
