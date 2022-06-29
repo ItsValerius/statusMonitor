@@ -6,4 +6,4 @@ Environment file with Variables:
 
 MAIL_TO \
 MAIL_FROM \
-MAIL_PASSWORD \
+MAIL_PASSWORD
