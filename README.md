@@ -6,4 +6,10 @@ Environment file with Variables:
 
 MAIL_TO \
 MAIL_FROM \
-MAIL_PASSWORD
+MAIL_PASSWORD \
+
+# Example .env file: 
+
+MAIL_TO="receiver1@example.com,receiver2@example.com,receiver3@example.com" \
+MAIL_FROM="sender@example.com" \
+MAIL_PASSWORD="secretpassword123"
