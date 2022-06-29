@@ -103,7 +103,6 @@ func getResponse(service *Service, wg *sync.WaitGroup, client *http.Client) {
 			return
 		}
 
-		//log that the service is still offline.
 		if !service.IsOnline {
 			log.Println("Request to " + service.Address + " failed, service is still offline")
 			log.Println("Service has been offline since: ", service.OfflineSince)
