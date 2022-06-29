@@ -29,7 +29,8 @@ func main() {
 		return
 	}
 
-	// Get own IPv4 address, split it into an array and remove the last element.
+	//Get own IPv4 address, split it into an array and remove the last element.
+	//This is just a safety incase the IP address range is not the standard 192.168.1.0/24
 	ipv4 := GetOwnIPv4Adress()
 	ipv4Arr := strings.Split(ipv4, ".")
 	ipv4Arr = ipv4Arr[:len(ipv4Arr)-1]
