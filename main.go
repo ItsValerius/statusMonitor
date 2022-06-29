@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -11,24 +10,31 @@ import (
 	"sync"
 	"time"
 
-	"github.com/j-keck/arping"
+	"github.com/joho/godotenv"
 )
 
 type Service struct {
-	IsOnline bool
-	Count    int
-	Hostname string
-	Address  string
-	HWAdress net.HardwareAddr
+	IsOnline     bool
+	Count        int
+	Hostname     string
+	Address      string
+	OfflineSince time.Time
 }
 
 func main() {
+	err := godotenv.Load()
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	// Get own IPv4 address, split it into an array and remove the last element.
 	ipv4 := GetOwnIPv4Adress()
 	ipv4Arr := strings.Split(ipv4, ".")
 	ipv4Arr = ipv4Arr[:len(ipv4Arr)-1]
 
-	port := 80
+	port := 3000
 
 	var results []ScanResult
 	services := []Service{}
@@ -45,17 +51,12 @@ func main() {
 		if result.State {
 			log.Println(result.Address + ":" + strconv.Itoa(result.Port) + " is open")
 
-			dstIP := net.ParseIP(result.Address)
-			hwAddr, duration, err := arping.Ping(dstIP)
-
 			if err != nil {
 				log.Println(err)
 				continue
 			}
 
-			services = append(services, Service{IsOnline: true, Count: 0, Hostname: hostname, Address: fmt.Sprintf("http://%s:%d", result.Address, result.Port), HWAdress: hwAddr})
-
-			log.Printf("%s (%s) %d usec\n", dstIP, hwAddr, duration/1000)
+			services = append(services, Service{IsOnline: true, Count: 0, Hostname: hostname, Address: fmt.Sprintf("http://%s:%d", result.Address, result.Port)})
 
 		}
 	}
@@ -65,11 +66,16 @@ func main() {
 		Timeout: 5 * time.Second,
 	}
 
+	if len(services) == 0 {
+		log.Println("No services found")
+		return
+	}
 	//Run indefinitely, checking the status of the services.
+
 	for {
 		for i := 0; i < len(services); i++ {
 			wg.Add(1)
-			go getResponse(services[i].Address, &services[i].IsOnline, &services[i].Count, hostname, &wg, &client)
+			go getResponse(&services[i], &wg, &client)
 		}
 		wg.Wait()
 
@@ -78,25 +84,33 @@ func main() {
 }
 
 //getResponse is a function that checks the status of a service and sends a notification if the service is down after retrying 3 times.
-func getResponse(address string, isOnline *bool, count *int, hostname string, wg *sync.WaitGroup, client *http.Client) {
+func getResponse(service *Service, wg *sync.WaitGroup, client *http.Client) {
 	defer wg.Done()
 
-	_, err := client.Get(address)
+	_, err := client.Get(service.Address)
 	if err != nil {
-		if *isOnline {
-			*count++
-		}
-		log.Println("Request failed the: " + strconv.Itoa(*count) + " time,	 for: " + address)
-		if *count == 3 && *isOnline {
-			log.Println("Request to " + address + " failed 3 times, marking as offline")
-			SendMail(address, hostname)
-			*isOnline = false
+		if service.IsOnline {
+			service.Count++
+			log.Println("Request failed the: " + strconv.Itoa(service.Count) + ". time, for: " + service.Address)
 		}
 
+		if service.Count == 3 && service.IsOnline {
+			log.Println("Request to " + service.Address + " failed 3 times, marking as offline")
+			SendMail(service.Address, service.Hostname)
+			service.OfflineSince = time.Now()
+			service.IsOnline = false
+			return
+		}
+
+		//log that the service is still offline.
+		if !service.IsOnline {
+			log.Println("Request to " + service.Address + " failed, service is still offline")
+			log.Println("Service has been offline since: ", service.OfflineSince)
+		}
 		return
 	}
-	*isOnline = true
-	*count = 0
-	log.Println("Successfully pinged " + address)
+	service.IsOnline = true
+	service.Count = 0
+	log.Println("Successfully pinged " + service.Address)
 
 }

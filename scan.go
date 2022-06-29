@@ -57,15 +57,17 @@ func GetOwnIPv4Adress() string {
 
 //StartScan starts a scan of the local network for open ports.
 func StartScan(ipv4Arr []string, port int, results *[]ScanResult) {
+	log.Println("Scanning network for open ports...")
+	log.Println("IP Range : ", strings.Join(append(ipv4Arr, "1"), "."), "---", strings.Join(append(ipv4Arr, "255"), "."))
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
 	for i := 0; i < 255; i++ {
+
 		wg.Add(1)
 		target := fmt.Sprintf("%s.%d", strings.Join(ipv4Arr, "."), i)
 
 		go func(target string) {
 			defer wg.Done()
-			//fmt.Println("Port Scanning " + target)
 			open := ScanPort("tcp", target, port)
 
 			*results = append(*results, ScanResult{port, open, target})
