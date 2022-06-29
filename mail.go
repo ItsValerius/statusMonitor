@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/smtp"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -16,15 +17,14 @@ func SendMail(address string, hostname string) {
 	password := os.Getenv("MAIL_PASSWORD")
 
 	// Receiver email address.
-	to := []string{
-		os.Getenv("MAIL_TO"),
-	}
+	to := strings.Split(os.Getenv("MAIL_TO"), ",")
+	toHeader := os.Getenv("MAIL_TO")
 
 	// smtp server configuration.
 	smtpHost := "smtp.gmail.com"
 	smtpPort := "587"
 	fromStr := fmt.Sprintf("From: %s \r\n", from)
-	toStr := fmt.Sprintf("To: %s \r\n", to[0])
+	toStr := fmt.Sprintf("To: %s \r\n", toHeader)
 	subject := fmt.Sprintf("Subject: %s Request failed \r\n\r\n", hostname)
 	body := fmt.Sprintf("Request failed for: %s \r\nReported Time: %s \r\n", address, time.Now())
 	msg := []byte(fromStr + toStr + subject + body)
