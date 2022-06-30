@@ -10,7 +10,7 @@ import (
 )
 
 // SendMail sends an email to the given address using the given SMTP server.
-func SendMail(address string, hostname string) {
+func SendMail(address string) {
 
 	// Sender data.
 	from := os.Getenv("MAIL_FROM")

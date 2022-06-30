@@ -97,7 +97,7 @@ func getResponse(service *Service, wg *sync.WaitGroup, client *http.Client) {
 
 		if service.Count == 3 && service.IsOnline {
 			log.Println("Request to " + service.Address + " failed 3 times, marking as offline")
-			SendMail(service.Address, service.Hostname)
+			SendMail(service.Address)
 			service.OfflineSince = time.Now()
 			service.IsOnline = false
 			return
