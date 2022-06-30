@@ -15,6 +15,7 @@ func SendMail(address string, hostname string) {
 	// Sender data.
 	from := os.Getenv("MAIL_FROM")
 	password := os.Getenv("MAIL_PASSWORD")
+	customName := os.Getenv("MAIL_CUSTOM_NAME")
 
 	// Receiver email address.
 	to := strings.Split(os.Getenv("MAIL_TO"), ",")
@@ -25,8 +26,8 @@ func SendMail(address string, hostname string) {
 	smtpPort := "587"
 	fromStr := fmt.Sprintf("From: %s \r\n", from)
 	toStr := fmt.Sprintf("To: %s \r\n", toHeader)
-	subject := fmt.Sprintf("Subject: %s Request failed \r\n\r\n", hostname)
-	body := fmt.Sprintf("Request failed for: %s \r\nReported Time: %s \r\n", address, time.Now())
+	subject := fmt.Sprintf("Subject: %s Service offline \r\n\r\n", customName)
+	body := fmt.Sprintf("Request failed for: %s \r\nReported Time: %s \r\n", address, time.Now().Format(time.RFC3339))
 	msg := []byte(fromStr + toStr + subject + body)
 
 	// Authentication.
