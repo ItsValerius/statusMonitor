@@ -1,29 +1,32 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/smtp"
-	"os"
-	"strings"
 	"time"
 )
 
 // SendMail sends an email to the given address using the given SMTP server.
 func SendMail(address string) {
-
+	params := GetParams("parameters")
+	fmt.Println(params)
+	for key, ele := range params {
+		fmt.Println(key, ele)
+	}
 	// Sender data.
-	from := os.Getenv("MAIL_FROM")
-	password := os.Getenv("MAIL_PASSWORD")
-	customName := os.Getenv("MAIL_CUSTOM_NAME")
+	from := MAIL_ADDR
+	password := MAIL_PW
+	customName := params["dclp"]
 
 	// Receiver email address.
-	to := strings.Split(os.Getenv("MAIL_TO"), ",")
-	toHeader := os.Getenv("MAIL_TO")
+	//to := strings.Split(params["receiver"], ",")
+	toHeader := params["receiver"]
 
 	// smtp server configuration.
-	smtpHost := "smtp.gmail.com"
-	smtpPort := "587"
+	smtpHost := params["smtp"]
+	smtpPort := params["port"]
 	fromStr := fmt.Sprintf("From: %s \r\n", from)
 	toStr := fmt.Sprintf("To: %s \r\n", toHeader)
 	subject := fmt.Sprintf("Subject: %s Service offline \r\n\r\n", customName)
@@ -33,11 +36,54 @@ func SendMail(address string) {
 	// Authentication.
 	auth := smtp.PlainAuth("", from, password, smtpHost)
 
-	// Sending email.
-	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, msg)
-	if err != nil {
-		log.Println(err)
-		return
+	tlsconfig := &tls.Config{
+		InsecureSkipVerify: false,
+		ServerName:         smtpHost,
 	}
+
+	// Here is the key, you need to call tls.Dial instead of smtp.Dial
+	// for smtp servers running on 465 that require an ssl connection
+	// from the very beginning (no starttls)
+	conn, err := tls.Dial("tcp", smtpHost+":"+smtpPort, tlsconfig)
+	if err != nil {
+		log.Panic(err)
+	}
+	c, err := smtp.NewClient(conn, smtpHost)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Auth
+	if err = c.Auth(auth); err != nil {
+		log.Panic(err)
+	}
+
+	// To && From
+	if err = c.Mail(from); err != nil {
+		log.Panic(err)
+	}
+
+	if err = c.Rcpt(toHeader); err != nil {
+		log.Panic(err)
+	}
+
+	// Data
+	w, err := c.Data()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = w.Write(msg)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	err = w.Close()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	c.Quit()
 	log.Println("Email Sent Successfully!")
+
 }

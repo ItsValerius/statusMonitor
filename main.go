@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,8 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 type Service struct {
@@ -21,13 +21,18 @@ type Service struct {
 	OfflineSince time.Time
 }
 
-func main() {
-	err := godotenv.Load()
+var (
+	MAIL_PW   string
+	MAIL_ADDR string
+)
 
-	if err != nil {
-		log.Println(err)
-		return
-	}
+func init() {
+	flag.StringVar(&MAIL_PW, "p", "", "Mail Password")
+	flag.StringVar(&MAIL_ADDR, "m", "", "Mail Address")
+	flag.Parse()
+}
+
+func main() {
 
 	//Get own IPv4 address, split it into an array and remove the last element.
 	//This is just a safety incase the IP address range is not the standard 192.168.1.0/24
@@ -35,7 +40,7 @@ func main() {
 	ipv4Arr := strings.Split(ipv4, ".")
 	ipv4Arr = ipv4Arr[:len(ipv4Arr)-1]
 
-	port := 3000
+	port := 3737
 
 	var results []ScanResult
 	services := []Service{}
@@ -57,16 +62,19 @@ func main() {
 				continue
 			}
 
-			services = append(services, Service{IsOnline: true, Count: 0, Hostname: hostname, Address: fmt.Sprintf("http://%s:%d", result.Address, result.Port)})
+			services = append(services, Service{IsOnline: true, Count: 0, Hostname: hostname, Address: fmt.Sprintf("https://%s:%d", result.Address, result.Port)})
 
 		}
 	}
 
 	wg := sync.WaitGroup{}
-	client := http.Client{
-		Timeout: 5 * time.Second,
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
+	client := http.Client{
+		Timeout:   5 * time.Second,
+		Transport: tr,
+	}
 	if len(services) == 0 {
 		log.Println("No services found")
 		return
