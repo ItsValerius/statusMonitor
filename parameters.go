@@ -7,7 +7,7 @@ import (
 )
 
 func GetParams(name string) map[string]string {
-	functions := map[string]string{"dclp": "get_dclp", "smtp": "get_smpt_server", "port": "get_port", "sender": "get_sender_email", "receiver": "get_receiver_email", "password": "get_password"}
+	functions := map[string]string{"dclp": "get_dclp", "smtp": "get_smpt_server", "port": "get_port", "receiver": "get_receiver_email"}
 	params := make(map[string]string)
 	for key, element := range functions {
 		formatedInput := fmt.Sprintf("import %s; print (%s.%s())", name, name, element)
