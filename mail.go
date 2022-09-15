@@ -11,10 +11,6 @@ import (
 // SendMail sends an email to the given address using the given SMTP server.
 func SendMail(address string) {
 	params := GetParams("parameters")
-	fmt.Println(params)
-	for key, ele := range params {
-		fmt.Println(key, ele)
-	}
 	// Sender data.
 	from := MAIL_ADDR
 	password := MAIL_PW

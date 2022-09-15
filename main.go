@@ -34,6 +34,11 @@ func init() {
 
 func main() {
 
+	startHour := 6
+	endHour := 22
+
+	fmt.Println(time.Now().Hour() > startHour && time.Now().Hour() < endHour)
+
 	//Get own IPv4 address, split it into an array and remove the last element.
 	//This is just a safety incase the IP address range is not the standard 192.168.1.0/24
 	ipv4 := GetOwnIPv4Adress()
@@ -50,23 +55,39 @@ func main() {
 		return
 	}
 	//Scan the IP Range of the local network for open ports.
-	StartScan(ipv4Arr, port, &results)
+	//try 3 times before exiting.
+	try := 0
+	for {
 
-	//Loop over the results and create a Service struct for each open port.
-	for _, result := range results {
-		if result.State {
-			log.Println(result.Address + ":" + strconv.Itoa(result.Port) + " is open")
+		StartScan(ipv4Arr, port, &results)
 
-			if err != nil {
-				log.Println(err)
-				continue
+		//Loop over the results and create a Service struct for each open port.
+		for _, result := range results {
+			if result.State {
+				log.Println(result.Address + ":" + strconv.Itoa(result.Port) + " is open")
+
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+
+				services = append(services, Service{IsOnline: true, Count: 0, Hostname: hostname, Address: fmt.Sprintf("https://%s:%d", result.Address, result.Port)})
+
 			}
-
-			services = append(services, Service{IsOnline: true, Count: 0, Hostname: hostname, Address: fmt.Sprintf("https://%s:%d", result.Address, result.Port)})
-
 		}
+		if len(services) > 0 {
+			break
+		}
+		if try >= 3 {
+			log.Println("No services found after 3 tries")
+			log.Println("Exiting")
+			return
+		}
+		try++
+		log.Println("No services found")
+		log.Println("trying again in 30 seconds")
+		<-time.After(time.Second * 30)
 	}
-
 	wg := sync.WaitGroup{}
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -75,24 +96,24 @@ func main() {
 		Timeout:   5 * time.Second,
 		Transport: tr,
 	}
-	if len(services) == 0 {
-		log.Println("No services found")
-		return
-	}
+
 	//Run indefinitely, checking the status of the services.
 
 	for {
-		for i := 0; i < len(services); i++ {
-			wg.Add(1)
-			go getResponse(&services[i], &wg, &client)
-		}
-		wg.Wait()
+		if time.Now().Hour() > startHour && time.Now().Hour() < endHour {
+			for i := 0; i < len(services); i++ {
+				wg.Add(1)
+				go getResponse(&services[i], &wg, &client)
+			}
+			wg.Wait()
 
-		<-time.After(15 * time.Second)
+			<-time.After(15 * time.Second)
+		}
+		<-time.After(time.Hour)
 	}
 }
 
-//getResponse is a function that checks the status of a service and sends a notification if the service is down after retrying 3 times.
+// getResponse is a function that checks the status of a service and sends a notification if the service is down after retrying 3 times.
 func getResponse(service *Service, wg *sync.WaitGroup, client *http.Client) {
 	defer wg.Done()
 
